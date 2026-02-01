@@ -55,27 +55,40 @@ def main():
 
         # Loop until the user types 'quit'
         while True:
-            # Get input text
-            user_prompt = input("Submit two images (or type 'quit' to exit): ")
-            if user_prompt.lower() == "quit":
+            # Get input image file paths
+            img1_path = input("Enter path to grocery list image (or type 'quit' to exit): ")
+            if img1_path.lower() == "quit":
                 break
-            if len(user_prompt) == 0:
-                print("Please submit two images.")
+            img2_path = input("Enter path to menu items image (or type 'quit' to exit): ")
+            if img2_path.lower() == "quit":
+                break
+
+            # Check if files exist
+            if not (os.path.isfile(img1_path) and os.path.isfile(img2_path)):
+                print("One or both image files do not exist. Please try again.")
                 continue
 
-            # Send a prompt to the agent
+            # Read images as binary
+            with open(img1_path, "rb") as f1, open(img2_path, "rb") as f2:
+                img1_data = f1.read()
+                img2_data = f2.read()
+
+            # Send images to the agent
             message = agent_client.messages.create(
                 thread_id=thread.id,
                 role="user",
-                content=user_prompt
+                content="Please process these two images.",
+                attachments=[
+                    {"filename": os.path.basename(img1_path), "content": img1_data, "content_type": "image/jpeg"},
+                    {"filename": os.path.basename(img2_path), "content": img2_data, "content_type": "image/jpeg"}
+                ]
             )
             run = agent_client.runs.create_and_process(thread_id=thread.id, agent_id=agent.id)
-
 
             # Check the run status for failures
             if run.status == "failed":
                 print(f"Run failed: {run.last_error}")
-                
+
             # Show the latest response from the agent
             last_msg = agent_client.messages.get_last_message_text_by_role(
                 thread_id=thread.id,
